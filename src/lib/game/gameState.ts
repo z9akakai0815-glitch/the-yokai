@@ -2,6 +2,7 @@ import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
 export type CharacterType = 'sword' | 'gun' | 'magic' | 'fist';
+export type SkillSlot = 'Q' | 'E' | 'R';
 
 export interface CharacterData {
   name: string;
@@ -9,6 +10,17 @@ export interface CharacterData {
   level: number;
   unlockedSkills: string[];
   color: string;
+}
+
+export interface SkillCooldown {
+  remaining: number;  // 残りクールダウン（秒）
+  total: number;      // 全体クールダウン（秒）
+}
+
+export interface ActiveSkill {
+  id: string;
+  name: string;
+  duration: number;  // 残り持続時間
 }
 
 export interface GameState {
@@ -19,9 +31,14 @@ export interface GameState {
   playerRotation: number;
   isAttacking: boolean;
   
+  // スキル
+  skillCooldowns: Record<SkillSlot, SkillCooldown>;
+  activeSkill: ActiveSkill | null;
+  ultimateCharge: number;  // 0-100
+  
   // 進行
   souls: number;
-  totalSouls: number;  // 累計獲得魂
+  totalSouls: number;
   enemiesDefeated: number;
   currentStage: string;
   
@@ -41,6 +58,14 @@ const initialState: GameState = {
   playerRotation: 0,
   isAttacking: false,
   
+  skillCooldowns: {
+    Q: { remaining: 0, total: 8 },
+    E: { remaining: 0, total: 12 },
+    R: { remaining: 0, total: 0 },  // Ultはチャージ制
+  },
+  activeSkill: null,
+  ultimateCharge: 0,
+  
   souls: 0,
   totalSouls: 0,
   enemiesDefeated: 0,
@@ -52,28 +77,28 @@ const initialState: GameState = {
       name: '刀使い・零',
       unlocked: true,
       level: 1,
-      unlockedSkills: [],
+      unlockedSkills: ['sword_q', 'sword_e', 'sword_r'],  // 初期から全スキル使用可能
       color: '#4488ff',
     },
     gun: {
       name: '銃使い・凛',
       unlocked: false,
       level: 1,
-      unlockedSkills: [],
+      unlockedSkills: ['gun_q', 'gun_e', 'gun_r'],
       color: '#ff8844',
     },
     magic: {
       name: '術師・紫',
       unlocked: false,
       level: 1,
-      unlockedSkills: [],
+      unlockedSkills: ['magic_q', 'magic_e', 'magic_r'],
       color: '#aa44ff',
     },
     fist: {
       name: '格闘家・剛',
       unlocked: false,
       level: 1,
-      unlockedSkills: [],
+      unlockedSkills: ['fist_q', 'fist_e', 'fist_r'],
       color: '#44ff88',
     },
   },
@@ -82,30 +107,22 @@ const initialState: GameState = {
   showCharacterSelect: false,
 };
 
-// ローカルストレージのキー
 const SAVE_KEY = 'the-yokai-save';
 
-// セーブデータを読み込む
 function loadSaveData(): Partial<GameState> | null {
   if (!browser) return null;
-  
   try {
     const saved = localStorage.getItem(SAVE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
+    if (saved) return JSON.parse(saved);
   } catch (e) {
     console.error('Failed to load save data:', e);
   }
   return null;
 }
 
-// セーブデータを保存
 function saveGameData(state: GameState) {
   if (!browser) return;
-  
   try {
-    // 保存するデータを選別（位置などは保存しない）
     const saveData = {
       souls: state.souls,
       totalSouls: state.totalSouls,
@@ -120,16 +137,12 @@ function saveGameData(state: GameState) {
   }
 }
 
-// 初期状態にセーブデータをマージ
 function getInitialState(): GameState {
   const saved = loadSaveData();
-  if (saved) {
-    return { ...initialState, ...saved };
-  }
+  if (saved) return { ...initialState, ...saved };
   return initialState;
 }
 
-// ストア作成
 function createGameStore() {
   const { subscribe, set, update } = writable<GameState>(getInitialState());
   
@@ -138,11 +151,19 @@ function createGameStore() {
     set,
     update,
     
-    // キャラクター切り替え
     switchCharacter: (type: CharacterType) => {
       update(state => {
         if (state.characters[type].unlocked) {
-          const newState = { ...state, currentCharacter: type };
+          const newState = { 
+            ...state, 
+            currentCharacter: type,
+            // キャラ変更時にクールダウンリセット
+            skillCooldowns: {
+              Q: { remaining: 0, total: 8 },
+              E: { remaining: 0, total: 12 },
+              R: { remaining: 0, total: 0 },
+            },
+          };
           saveGameData(newState);
           return newState;
         }
@@ -150,7 +171,6 @@ function createGameStore() {
       });
     },
     
-    // キャラクターアンロック
     unlockCharacter: (type: CharacterType, cost: number) => {
       update(state => {
         if (state.souls >= cost && !state.characters[type].unlocked) {
@@ -169,7 +189,6 @@ function createGameStore() {
       });
     },
     
-    // スキルアンロック
     unlockSkill: (skillId: string, cost: number) => {
       update(state => {
         const char = state.characters[state.currentCharacter];
@@ -192,7 +211,89 @@ function createGameStore() {
       });
     },
     
-    // 魂を追加
+    // スキル使用
+    useSkill: (slot: SkillSlot) => {
+      update(state => {
+        const cooldown = state.skillCooldowns[slot];
+        
+        // Ultはチャージ制
+        if (slot === 'R') {
+          if (state.ultimateCharge >= 100) {
+            return {
+              ...state,
+              ultimateCharge: 0,
+              activeSkill: {
+                id: `${state.currentCharacter}_r`,
+                name: 'Ultimate',
+                duration: 3,
+              },
+            };
+          }
+          return state;
+        }
+        
+        // 通常スキル
+        if (cooldown.remaining <= 0) {
+          return {
+            ...state,
+            skillCooldowns: {
+              ...state.skillCooldowns,
+              [slot]: { ...cooldown, remaining: cooldown.total },
+            },
+            activeSkill: {
+              id: `${state.currentCharacter}_${slot.toLowerCase()}`,
+              name: slot,
+              duration: slot === 'Q' ? 2 : 3,
+            },
+          };
+        }
+        return state;
+      });
+    },
+    
+    // クールダウン更新（毎フレーム呼ぶ）
+    updateCooldowns: (deltaSeconds: number) => {
+      update(state => {
+        const newCooldowns = { ...state.skillCooldowns };
+        let changed = false;
+        
+        for (const slot of ['Q', 'E', 'R'] as SkillSlot[]) {
+          if (newCooldowns[slot].remaining > 0) {
+            newCooldowns[slot] = {
+              ...newCooldowns[slot],
+              remaining: Math.max(0, newCooldowns[slot].remaining - deltaSeconds),
+            };
+            changed = true;
+          }
+        }
+        
+        // アクティブスキルの持続時間も更新
+        let newActiveSkill = state.activeSkill;
+        if (state.activeSkill) {
+          const newDuration = state.activeSkill.duration - deltaSeconds;
+          if (newDuration <= 0) {
+            newActiveSkill = null;
+          } else {
+            newActiveSkill = { ...state.activeSkill, duration: newDuration };
+          }
+          changed = true;
+        }
+        
+        if (changed) {
+          return { ...state, skillCooldowns: newCooldowns, activeSkill: newActiveSkill };
+        }
+        return state;
+      });
+    },
+    
+    // Ultチャージ追加
+    addUltCharge: (amount: number) => {
+      update(state => ({
+        ...state,
+        ultimateCharge: Math.min(100, state.ultimateCharge + amount),
+      }));
+    },
+    
     addSouls: (amount: number) => {
       update(state => {
         const newState = {
@@ -205,19 +306,19 @@ function createGameStore() {
       });
     },
     
-    // 敵撃破
     defeatEnemy: () => {
       update(state => {
         const newState = {
           ...state,
           enemiesDefeated: state.enemiesDefeated + 1,
+          // 敵を倒すとUltチャージ
+          ultimateCharge: Math.min(100, state.ultimateCharge + 15),
         };
         saveGameData(newState);
         return newState;
       });
     },
     
-    // ダメージを受ける
     takeDamage: (amount: number) => {
       update(state => ({
         ...state,
@@ -225,7 +326,6 @@ function createGameStore() {
       }));
     },
     
-    // 回復
     heal: (amount: number) => {
       update(state => ({
         ...state,
@@ -233,32 +333,25 @@ function createGameStore() {
       }));
     },
     
-    // スキルツリー表示切り替え
     toggleSkillTree: () => {
       update(state => ({ ...state, showSkillTree: !state.showSkillTree }));
     },
     
-    // キャラ選択表示切り替え
     toggleCharacterSelect: () => {
       update(state => ({ ...state, showCharacterSelect: !state.showCharacterSelect }));
     },
     
-    // HPリセット
     resetHp: () => {
       update(state => ({ ...state, playerHp: state.playerMaxHp }));
     },
     
-    // 手動セーブ
     save: () => {
       const state = get(gameState);
       saveGameData(state);
     },
     
-    // データリセット
     resetAll: () => {
-      if (browser) {
-        localStorage.removeItem(SAVE_KEY);
-      }
+      if (browser) localStorage.removeItem(SAVE_KEY);
       set(initialState);
     },
   };
@@ -266,9 +359,8 @@ function createGameStore() {
 
 export const gameState = createGameStore();
 
-// キャラクターアンロックコスト
 export const CHARACTER_UNLOCK_COSTS: Record<CharacterType, number> = {
-  sword: 0,   // 最初から解放
+  sword: 0,
   gun: 50,
   magic: 100,
   fist: 75,

@@ -1,237 +1,166 @@
-// キャラクター別スキルツリー
+import type { CharacterType, SkillSlot } from './gameState';
 
 export interface Skill {
   id: string;
+  slot: SkillSlot;
   name: string;
   description: string;
-  cost: number;
-  requires?: string[];  // 必要な前提スキル
-  effect: {
-    type: 'damage' | 'speed' | 'defense' | 'special';
-    value: number;
-  };
+  cooldown: number;  // 秒
+  icon: string;
+  color: string;
 }
 
-export interface SkillTree {
-  characterType: string;
-  skills: Skill[];
+export interface SkillSet {
+  character: CharacterType;
+  characterName: string;
+  skills: Record<SkillSlot, Skill>;
 }
 
-// 🗡️ 刀使いのスキルツリー
-export const swordSkillTree: SkillTree = {
-  characterType: 'sword',
-  skills: [
-    // Tier 1
-    {
-      id: 'sword_basic',
-      name: '基本斬撃強化',
-      description: '通常攻撃のダメージ+20%',
-      cost: 10,
-      effect: { type: 'damage', value: 1.2 }
+// キャラクター別スキル定義
+export const skillSets: Record<CharacterType, SkillSet> = {
+  sword: {
+    character: 'sword',
+    characterName: '刀使い・零',
+    skills: {
+      Q: {
+        id: 'sword_q',
+        slot: 'Q',
+        name: '居合斬り',
+        description: '高速で前方に突進し、敵を斬りつける',
+        cooldown: 8,
+        icon: '⚔️',
+        color: '#4488ff',
+      },
+      E: {
+        id: 'sword_e',
+        slot: 'E',
+        name: '剣気',
+        description: '周囲に剣気を放ち、近くの敵にダメージ',
+        cooldown: 12,
+        icon: '🌀',
+        color: '#4488ff',
+      },
+      R: {
+        id: 'sword_r',
+        slot: 'R',
+        name: '一閃',
+        description: '必殺の一撃。前方広範囲に大ダメージ',
+        cooldown: 0,  // チャージ制
+        icon: '⚡',
+        color: '#ffcc00',
+      },
     },
-    {
-      id: 'sword_speed',
-      name: '抜刀術',
-      description: '攻撃速度+15%',
-      cost: 15,
-      effect: { type: 'speed', value: 1.15 }
-    },
-    // Tier 2
-    {
-      id: 'sword_combo',
-      name: '三連斬',
-      description: '連続攻撃が可能に',
-      cost: 25,
-      requires: ['sword_basic'],
-      effect: { type: 'special', value: 3 }
-    },
-    {
-      id: 'sword_iai',
-      name: '居合',
-      description: '溜め攻撃で大ダメージ',
-      cost: 30,
-      requires: ['sword_speed'],
-      effect: { type: 'damage', value: 2.0 }
-    },
-    // Tier 3
-    {
-      id: 'sword_ultimate',
-      name: '奥義・月光',
-      description: '範囲攻撃の必殺技',
-      cost: 50,
-      requires: ['sword_combo', 'sword_iai'],
-      effect: { type: 'special', value: 100 }
-    },
-  ]
-};
-
-// 🔫 銃使いのスキルツリー
-export const gunSkillTree: SkillTree = {
-  characterType: 'gun',
-  skills: [
-    // Tier 1
-    {
-      id: 'gun_basic',
-      name: '霊弾強化',
-      description: '弾のダメージ+20%',
-      cost: 10,
-      effect: { type: 'damage', value: 1.2 }
-    },
-    {
-      id: 'gun_reload',
-      name: '高速リロード',
-      description: 'リロード速度+30%',
-      cost: 15,
-      effect: { type: 'speed', value: 1.3 }
-    },
-    // Tier 2
-    {
-      id: 'gun_rapid',
-      name: '連射',
-      description: '連続射撃が可能に',
-      cost: 25,
-      requires: ['gun_basic'],
-      effect: { type: 'special', value: 5 }
-    },
-    {
-      id: 'gun_pierce',
-      name: '貫通弾',
-      description: '敵を貫通する弾',
-      cost: 30,
-      requires: ['gun_reload'],
-      effect: { type: 'special', value: 1 }
-    },
-    // Tier 3
-    {
-      id: 'gun_ultimate',
-      name: '奥義・破魔光線',
-      description: '強力なビーム攻撃',
-      cost: 50,
-      requires: ['gun_rapid', 'gun_pierce'],
-      effect: { type: 'special', value: 100 }
-    },
-  ]
-};
-
-// ✨ 術師のスキルツリー
-export const magicSkillTree: SkillTree = {
-  characterType: 'magic',
-  skills: [
-    // Tier 1
-    {
-      id: 'magic_basic',
-      name: '霊力増幅',
-      description: '術のダメージ+20%',
-      cost: 10,
-      effect: { type: 'damage', value: 1.2 }
-    },
-    {
-      id: 'magic_range',
-      name: '術式拡大',
-      description: '攻撃範囲+30%',
-      cost: 15,
-      effect: { type: 'special', value: 1.3 }
-    },
-    // Tier 2
-    {
-      id: 'magic_fire',
-      name: '火炎術',
-      description: '炎の範囲攻撃',
-      cost: 25,
-      requires: ['magic_basic'],
-      effect: { type: 'damage', value: 1.5 }
-    },
-    {
-      id: 'magic_barrier',
-      name: '結界術',
-      description: 'ダメージを軽減する結界',
-      cost: 30,
-      requires: ['magic_range'],
-      effect: { type: 'defense', value: 0.7 }
-    },
-    // Tier 3
-    {
-      id: 'magic_ultimate',
-      name: '奥義・天誅',
-      description: '天からの裁きを下す',
-      cost: 50,
-      requires: ['magic_fire', 'magic_barrier'],
-      effect: { type: 'special', value: 100 }
-    },
-  ]
-};
-
-// 👊 格闘家のスキルツリー
-export const fistSkillTree: SkillTree = {
-  characterType: 'fist',
-  skills: [
-    // Tier 1
-    {
-      id: 'fist_basic',
-      name: '拳圧強化',
-      description: '打撃ダメージ+20%',
-      cost: 10,
-      effect: { type: 'damage', value: 1.2 }
-    },
-    {
-      id: 'fist_speed',
-      name: '疾風',
-      description: '移動速度+20%',
-      cost: 15,
-      effect: { type: 'speed', value: 1.2 }
-    },
-    // Tier 2
-    {
-      id: 'fist_combo',
-      name: '連撃',
-      description: '5連続コンボが可能に',
-      cost: 25,
-      requires: ['fist_basic'],
-      effect: { type: 'special', value: 5 }
-    },
-    {
-      id: 'fist_counter',
-      name: 'カウンター',
-      description: '敵の攻撃を弾き返す',
-      cost: 30,
-      requires: ['fist_speed'],
-      effect: { type: 'special', value: 1 }
-    },
-    // Tier 3
-    {
-      id: 'fist_ultimate',
-      name: '奥義・羅刹拳',
-      description: '怒涛の連撃を叩き込む',
-      cost: 50,
-      requires: ['fist_combo', 'fist_counter'],
-      effect: { type: 'special', value: 100 }
-    },
-  ]
-};
-
-// スキルツリーをまとめて取得
-export const skillTrees: Record<string, SkillTree> = {
-  sword: swordSkillTree,
-  gun: gunSkillTree,
-  magic: magicSkillTree,
-  fist: fistSkillTree,
-};
-
-// スキルがアンロック可能かチェック
-export function canUnlockSkill(
-  skill: Skill, 
-  unlockedSkills: string[], 
-  souls: number
-): boolean {
-  // コスト確認
-  if (souls < skill.cost) return false;
+  },
   
-  // 前提スキル確認
-  if (skill.requires) {
-    for (const req of skill.requires) {
-      if (!unlockedSkills.includes(req)) return false;
+  gun: {
+    character: 'gun',
+    characterName: '銃使い・凛',
+    skills: {
+      Q: {
+        id: 'gun_q',
+        slot: 'Q',
+        name: '連射',
+        description: '高速で3連射する',
+        cooldown: 6,
+        icon: '🔫',
+        color: '#ff8844',
+      },
+      E: {
+        id: 'gun_e',
+        slot: 'E',
+        name: '閃光弾',
+        description: '敵の動きを一時的に止める',
+        cooldown: 15,
+        icon: '💥',
+        color: '#ff8844',
+      },
+      R: {
+        id: 'gun_r',
+        slot: 'R',
+        name: '必中',
+        description: '照準を合わせ、確実に急所を撃ち抜く',
+        cooldown: 0,
+        icon: '🎯',
+        color: '#ffcc00',
+      },
+    },
+  },
+  
+  magic: {
+    character: 'magic',
+    characterName: '術師・紫',
+    skills: {
+      Q: {
+        id: 'magic_q',
+        slot: 'Q',
+        name: '火球',
+        description: '炎の球を放ち、着弾点で爆発',
+        cooldown: 7,
+        icon: '🔥',
+        color: '#aa44ff',
+      },
+      E: {
+        id: 'magic_e',
+        slot: 'E',
+        name: '結界',
+        description: '一定時間、ダメージを軽減する',
+        cooldown: 20,
+        icon: '🛡️',
+        color: '#aa44ff',
+      },
+      R: {
+        id: 'magic_r',
+        slot: 'R',
+        name: '隕石',
+        description: '空から巨大な隕石を降らせる',
+        cooldown: 0,
+        icon: '☄️',
+        color: '#ffcc00',
+      },
+    },
+  },
+  
+  fist: {
+    character: 'fist',
+    characterName: '格闘家・剛',
+    skills: {
+      Q: {
+        id: 'fist_q',
+        slot: 'Q',
+        name: '瞬歩',
+        description: '瞬間移動で敵の背後に回る',
+        cooldown: 5,
+        icon: '💨',
+        color: '#44ff88',
+      },
+      E: {
+        id: 'fist_e',
+        slot: 'E',
+        name: '練気',
+        description: '次の攻撃のダメージが2倍になる',
+        cooldown: 10,
+        icon: '💪',
+        color: '#44ff88',
+      },
+      R: {
+        id: 'fist_r',
+        slot: 'R',
+        name: '百裂拳',
+        description: '超高速の連続パンチを叩き込む',
+        cooldown: 0,
+        icon: '👊',
+        color: '#ffcc00',
+      },
+    },
+  },
+};
+
+// スキルIDからスキル情報を取得
+export function getSkillById(id: string): Skill | null {
+  for (const set of Object.values(skillSets)) {
+    for (const skill of Object.values(set.skills)) {
+      if (skill.id === id) return skill;
     }
   }
-  
-  return true;
+  return null;
 }
