@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { T, useTask } from '@threlte/core';
+  import { T, useTask, useThrelte } from '@threlte/core';
   import { onMount, onDestroy } from 'svelte';
   import { gameState, type CharacterType } from '$lib/game/gameState';
   import * as THREE from 'three';
+
+  const { camera } = useThrelte();
 
   let position = { x: 0, y: 0, z: 0 };
   let rotation = 0;
@@ -12,10 +14,10 @@
   // キー入力状態
   let keys: Record<string, boolean> = {};
 
-  // 移動速度（キャラによって変わる）
+  // 移動速度
   const BASE_SPEED = 0.15;
   
-  // キャラクター別の色とパラメータ
+  // キャラクター別パラメータ
   const characterParams: Record<CharacterType, { speed: number; attackRange: number }> = {
     sword: { speed: 1.0, attackRange: 2 },
     gun: { speed: 0.9, attackRange: 8 },
@@ -53,7 +55,6 @@
     attackAnimation = 0;
     gameState.update(s => ({ ...s, isAttacking: true }));
     
-    // 攻撃アニメーション
     const attackDuration = $gameState.currentCharacter === 'fist' ? 200 : 300;
     setTimeout(() => {
       isAttacking = false;
@@ -76,31 +77,53 @@
     const charType = $gameState.currentCharacter;
     const speed = BASE_SPEED * characterParams[charType].speed;
     
-    // 移動入力
+    // 入力取得
     let inputX = 0;
     let inputZ = 0;
 
-    if (keys['w'] || keys['arrowup']) inputZ -= 1;
-    if (keys['s'] || keys['arrowdown']) inputZ += 1;
-    if (keys['a'] || keys['arrowleft']) inputX -= 1;
-    if (keys['d'] || keys['arrowright']) inputX += 1;
+    if (keys['w'] || keys['arrowup']) inputZ = -1;
+    if (keys['s'] || keys['arrowdown']) inputZ = 1;
+    if (keys['a'] || keys['arrowleft']) inputX = -1;
+    if (keys['d'] || keys['arrowright']) inputX = 1;
 
-    // 移動ベクトルを正規化して適用
+    // 移動がある場合
     if (inputX !== 0 || inputZ !== 0) {
-      const length = Math.sqrt(inputX * inputX + inputZ * inputZ);
-      inputX /= length;
-      inputZ /= length;
-      
-      // 移動方向に向きを変える
-      rotation = Math.atan2(inputX, inputZ);
-      
-      // 位置を更新
-      position.x += inputX * speed;
-      position.z += inputZ * speed;
-      
-      // 道路の範囲内に制限
-      position.x = Math.max(-9, Math.min(9, position.x));
-      position.z = Math.max(-40, Math.min(40, position.z));
+      // カメラの向きを取得
+      if ($camera) {
+        const cameraDirection = new THREE.Vector3();
+        $camera.getWorldDirection(cameraDirection);
+        cameraDirection.y = 0; // Y軸は無視（水平移動のみ）
+        cameraDirection.normalize();
+        
+        // カメラの右方向を計算
+        const cameraRight = new THREE.Vector3();
+        cameraRight.crossVectors(cameraDirection, new THREE.Vector3(0, 1, 0));
+        cameraRight.normalize();
+        
+        // 入力を正規化
+        const inputLength = Math.sqrt(inputX * inputX + inputZ * inputZ);
+        inputX /= inputLength;
+        inputZ /= inputLength;
+        
+        // カメラ基準の移動方向を計算
+        // 前後（Z入力）はカメラの向きの逆方向（カメラは後ろを向いているので）
+        // 左右（X入力）はカメラの右方向
+        const moveDirection = new THREE.Vector3();
+        moveDirection.addScaledVector(cameraDirection, -inputZ); // Wで前進
+        moveDirection.addScaledVector(cameraRight, inputX);      // Dで右
+        moveDirection.normalize();
+        
+        // 位置を更新
+        position.x += moveDirection.x * speed;
+        position.z += moveDirection.z * speed;
+        
+        // キャラクターの向きを移動方向に合わせる
+        rotation = Math.atan2(moveDirection.x, moveDirection.z);
+        
+        // 道路の範囲内に制限
+        position.x = Math.max(-9, Math.min(9, position.x));
+        position.z = Math.max(-40, Math.min(40, position.z));
+      }
     }
 
     // 攻撃アニメーション
@@ -127,19 +150,19 @@
   <!-- 体 -->
   <T.Mesh position.y={1} castShadow>
     <T.CapsuleGeometry args={[0.3, 1, 8, 16]} />
-    <T.MeshStandardMaterial color="#2a2a4a" />
+    <T.MeshLambertMaterial color="#2a2a4a" />
   </T.Mesh>
 
   <!-- 頭 -->
   <T.Mesh position.y={2} castShadow>
-    <T.SphereGeometry args={[0.35, 16, 16]} />
-    <T.MeshStandardMaterial color="#ffdbac" />
+    <T.SphereGeometry args={[0.35, 12, 12]} />
+    <T.MeshLambertMaterial color="#ffdbac" />
   </T.Mesh>
 
   <!-- 髪（キャラ別の色） -->
   <T.Mesh position={[0, 2.2, -0.1]} castShadow>
-    <T.SphereGeometry args={[0.38, 16, 16]} />
-    <T.MeshStandardMaterial color={charColor} />
+    <T.SphereGeometry args={[0.38, 12, 12]} />
+    <T.MeshLambertMaterial color={charColor} />
   </T.Mesh>
 
   <!-- 武器（キャラ別） -->
@@ -148,11 +171,11 @@
     <T.Group position={[0.5, 1.2, 0]} rotation.x={weaponRotation}>
       <T.Mesh position.y={-0.2}>
         <T.CylinderGeometry args={[0.04, 0.04, 0.3, 8]} />
-        <T.MeshStandardMaterial color="#4a3728" />
+        <T.MeshLambertMaterial color="#4a3728" />
       </T.Mesh>
       <T.Mesh position.y={0.4}>
         <T.BoxGeometry args={[0.02, 0.8, 0.08]} />
-        <T.MeshStandardMaterial color="#c0c0c0" metalness={0.9} roughness={0.1} />
+        <T.MeshLambertMaterial color="#c0c0c0" />
       </T.Mesh>
       {#if isAttacking}
         <T.Mesh position.y={0.4}>
@@ -167,11 +190,7 @@
     <T.Group position={[0.5, 1, 0.3]} rotation.y={weaponRotation * 0.3}>
       <T.Mesh>
         <T.BoxGeometry args={[0.08, 0.15, 0.4]} />
-        <T.MeshStandardMaterial color="#333" metalness={0.8} />
-      </T.Mesh>
-      <T.Mesh position={[0, 0, 0.15]}>
-        <T.CylinderGeometry args={[0.03, 0.03, 0.3, 8]} rotation={[Math.PI/2, 0, 0]} />
-        <T.MeshStandardMaterial color="#222" metalness={0.9} />
+        <T.MeshLambertMaterial color="#333" />
       </T.Mesh>
       {#if isAttacking}
         <T.Mesh position={[0, 0, 0.5]}>
@@ -186,15 +205,15 @@
     <T.Group position={[0.5, 0.5, 0]} rotation.x={weaponRotation * 0.5}>
       <T.Mesh position.y={0.8}>
         <T.CylinderGeometry args={[0.03, 0.04, 1.6, 8]} />
-        <T.MeshStandardMaterial color="#4a3728" />
+        <T.MeshLambertMaterial color="#4a3728" />
       </T.Mesh>
       <T.Mesh position.y={1.7}>
         <T.OctahedronGeometry args={[0.15]} />
-        <T.MeshStandardMaterial color="#aa44ff" emissive="#aa44ff" emissiveIntensity={0.5} />
+        <T.MeshBasicMaterial color="#aa44ff" />
       </T.Mesh>
       {#if isAttacking}
         <T.Mesh position={[0, 1.7, 0]}>
-          <T.SphereGeometry args={[0.5, 16, 16]} />
+          <T.SphereGeometry args={[0.5, 12, 12]} />
           <T.MeshBasicMaterial color="#aa44ff" transparent opacity={0.3} />
         </T.Mesh>
       {/if}
@@ -203,15 +222,13 @@
   {:else if charType === 'fist'}
     <!-- 👊 グローブ -->
     <T.Group>
-      <!-- 右拳 -->
       <T.Mesh position={[0.4, 1, isAttacking ? 0.5 : 0.2]} castShadow>
         <T.SphereGeometry args={[0.15, 8, 8]} />
-        <T.MeshStandardMaterial color="#8B4513" />
+        <T.MeshLambertMaterial color="#8B4513" />
       </T.Mesh>
-      <!-- 左拳 -->
       <T.Mesh position={[-0.4, 1, isAttacking ? 0.3 : 0.2]} castShadow>
         <T.SphereGeometry args={[0.15, 8, 8]} />
-        <T.MeshStandardMaterial color="#8B4513" />
+        <T.MeshLambertMaterial color="#8B4513" />
       </T.Mesh>
       {#if isAttacking}
         <T.Mesh position={[0, 1, 0.5]}>
@@ -223,8 +240,8 @@
   {/if}
 
   <!-- キャラクターオーラ -->
-  <T.Mesh position.y={1}>
-    <T.CylinderGeometry args={[0.6, 0.6, 0.1, 16]} />
-    <T.MeshBasicMaterial color={charColor} transparent opacity={0.2} />
+  <T.Mesh position.y={0.05} rotation.x={-Math.PI / 2}>
+    <T.CircleGeometry args={[0.5, 16]} />
+    <T.MeshBasicMaterial color={charColor} transparent opacity={0.3} />
   </T.Mesh>
 </T.Group>
