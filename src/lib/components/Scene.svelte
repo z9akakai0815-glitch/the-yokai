@@ -6,15 +6,11 @@
   import Enemy from './Enemy.svelte';
   import { gameState } from '$lib/game/gameState';
 
-  // 敵の配置（ステージ上のランダムな位置）
+  // 敵の配置（少なめに）
   const enemies: { x: number; z: number }[] = [
     { x: 3, z: -10 },
-    { x: -4, z: -5 },
-    { x: 5, z: 5 },
-    { x: -3, z: 15 },
-    { x: 0, z: -20 },
-    { x: 6, z: -15 },
-    { x: -5, z: 10 },
+    { x: -3, z: 5 },
+    { x: 0, z: 15 },
   ];
 </script>
 

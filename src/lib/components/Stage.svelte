@@ -1,10 +1,9 @@
 <script lang="ts">
   import { T } from '@threlte/core';
-  import * as THREE from 'three';
 
-  // 渋谷ステージ - 夜の東京風
+  // 最適化版 - 渋谷ステージ
   
-  // ビルの生成データ
+  // ビルデータ（数を減らす）
   interface Building {
     x: number;
     z: number;
@@ -14,65 +13,45 @@
     color: string;
   }
 
-  // ランダムにビルを配置
   const buildings: Building[] = [];
   
-  // 左側のビル群
-  for (let i = 0; i < 8; i++) {
+  // 左側のビル（5つに減らす）
+  for (let i = 0; i < 5; i++) {
     buildings.push({
-      x: -15 + Math.random() * 3,
-      z: -40 + i * 12,
-      width: 6 + Math.random() * 4,
-      depth: 6 + Math.random() * 4,
-      height: 15 + Math.random() * 25,
-      color: `hsl(${220 + Math.random() * 30}, 20%, ${15 + Math.random() * 10}%)`,
+      x: -15,
+      z: -30 + i * 15,
+      width: 8,
+      depth: 8,
+      height: 15 + i * 5,
+      color: '#1a1a2e',
     });
   }
 
-  // 右側のビル群
-  for (let i = 0; i < 8; i++) {
+  // 右側のビル（5つに減らす）
+  for (let i = 0; i < 5; i++) {
     buildings.push({
-      x: 15 + Math.random() * 3,
-      z: -40 + i * 12,
-      width: 6 + Math.random() * 4,
-      depth: 6 + Math.random() * 4,
-      height: 15 + Math.random() * 25,
-      color: `hsl(${220 + Math.random() * 30}, 20%, ${15 + Math.random() * 10}%)`,
+      x: 15,
+      z: -30 + i * 15,
+      width: 8,
+      depth: 8,
+      height: 20 + i * 4,
+      color: '#1a1a2e',
     });
   }
 
-  // 街灯データ
-  const streetLights: { x: number; z: number }[] = [];
-  for (let i = 0; i < 10; i++) {
-    streetLights.push({ x: -8, z: -35 + i * 8 });
-    streetLights.push({ x: 8, z: -35 + i * 8 });
-  }
-
-  // 窓の光（ビルごとにランダム）
-  function getWindowLights(building: Building): { x: number; y: number; z: number }[] {
-    const lights: { x: number; y: number; z: number }[] = [];
-    const windowsX = Math.floor(building.width / 2);
-    const windowsY = Math.floor(building.height / 3);
-    
-    for (let wx = 0; wx < windowsX; wx++) {
-      for (let wy = 0; wy < windowsY; wy++) {
-        if (Math.random() > 0.4) {
-          lights.push({
-            x: building.x - building.width / 2 + 1 + wx * 2,
-            y: 2 + wy * 3,
-            z: building.z + building.depth / 2 + 0.1,
-          });
-        }
-      }
-    }
-    return lights;
-  }
+  // 街灯（4つだけ、光源なし）
+  const streetLights = [
+    { x: -7, z: -20 },
+    { x: 7, z: -20 },
+    { x: -7, z: 20 },
+    { x: 7, z: 20 },
+  ];
 </script>
 
 <!-- 地面（道路） -->
 <T.Mesh rotation.x={-Math.PI / 2} receiveShadow>
   <T.PlaneGeometry args={[30, 100]} />
-  <T.MeshStandardMaterial color="#1a1a1a" />
+  <T.MeshLambertMaterial color="#1a1a1a" />
 </T.Mesh>
 
 <!-- 道路の白線 -->
@@ -81,130 +60,77 @@
   <T.MeshBasicMaterial color="#ffffff" />
 </T.Mesh>
 
-<!-- 歩道（左） -->
-<T.Mesh position={[-12, 0.1, 0]} rotation.x={-Math.PI / 2}>
-  <T.PlaneGeometry args={[6, 100]} />
-  <T.MeshStandardMaterial color="#2a2a2a" />
+<!-- 歩道（左右） -->
+<T.Mesh position={[-10, 0.05, 0]} rotation.x={-Math.PI / 2}>
+  <T.PlaneGeometry args={[4, 100]} />
+  <T.MeshLambertMaterial color="#252525" />
+</T.Mesh>
+<T.Mesh position={[10, 0.05, 0]} rotation.x={-Math.PI / 2}>
+  <T.PlaneGeometry args={[4, 100]} />
+  <T.MeshLambertMaterial color="#252525" />
 </T.Mesh>
 
-<!-- 歩道（右） -->
-<T.Mesh position={[12, 0.1, 0]} rotation.x={-Math.PI / 2}>
-  <T.PlaneGeometry args={[6, 100]} />
-  <T.MeshStandardMaterial color="#2a2a2a" />
-</T.Mesh>
-
-<!-- ビル群 -->
+<!-- ビル群（シンプルに） -->
 {#each buildings as building}
-  <T.Mesh 
-    position={[building.x, building.height / 2, building.z]} 
-    castShadow 
-    receiveShadow
-  >
+  <T.Mesh position={[building.x, building.height / 2, building.z]}>
     <T.BoxGeometry args={[building.width, building.height, building.depth]} />
-    <T.MeshStandardMaterial color={building.color} />
+    <T.MeshLambertMaterial color={building.color} />
   </T.Mesh>
   
-  <!-- ビルの窓の光 -->
-  {#each getWindowLights(building) as light}
-    <T.Mesh position={[light.x, light.y, light.z]}>
-      <T.PlaneGeometry args={[1, 1.5]} />
-      <T.MeshBasicMaterial 
-        color={Math.random() > 0.7 ? "#ffaa44" : "#aaddff"} 
-        transparent 
-        opacity={0.8} 
-      />
-    </T.Mesh>
-  {/each}
+  <!-- 窓（テクスチャ代わりに1枚の発光面） -->
+  <T.Mesh position={[building.x, building.height / 2, building.z + building.depth / 2 + 0.1]}>
+    <T.PlaneGeometry args={[building.width * 0.8, building.height * 0.7]} />
+    <T.MeshBasicMaterial color="#334466" transparent opacity={0.3} />
+  </T.Mesh>
 {/each}
 
-<!-- 街灯 -->
+<!-- 街灯（光源なし、見た目だけ） -->
 {#each streetLights as light}
-  <!-- ポール -->
   <T.Mesh position={[light.x, 2.5, light.z]}>
-    <T.CylinderGeometry args={[0.1, 0.1, 5, 8]} />
-    <T.MeshStandardMaterial color="#333" metalness={0.8} />
+    <T.CylinderGeometry args={[0.08, 0.08, 5, 6]} />
+    <T.MeshLambertMaterial color="#333" />
   </T.Mesh>
-  <!-- ランプ -->
   <T.Mesh position={[light.x, 5, light.z]}>
-    <T.SphereGeometry args={[0.3, 8, 8]} />
-    <T.MeshBasicMaterial color="#ffaa44" />
+    <T.SphereGeometry args={[0.25, 6, 6]} />
+    <T.MeshBasicMaterial color="#ffcc66" />
   </T.Mesh>
-  <!-- 光源 -->
-  <T.PointLight 
-    position={[light.x, 5, light.z]} 
-    intensity={0.5} 
-    color="#ffaa44" 
-    distance={15}
-  />
 {/each}
 
-<!-- 赤いネオン看板 -->
-<T.Group position={[-14, 8, -10]}>
-  <T.Mesh>
-    <T.BoxGeometry args={[4, 2, 0.2]} />
-    <T.MeshBasicMaterial color="#ff0040" />
-  </T.Mesh>
-  <T.PointLight position={[0, 0, 1]} intensity={1} color="#ff0040" distance={10} />
-</T.Group>
+<!-- ネオン看板（光源なし、シンプル） -->
+<T.Mesh position={[-14, 8, -10]}>
+  <T.BoxGeometry args={[3, 1.5, 0.1]} />
+  <T.MeshBasicMaterial color="#ff0040" />
+</T.Mesh>
 
-<!-- 青いネオン看板 -->
-<T.Group position={[14, 10, 5]}>
-  <T.Mesh>
-    <T.BoxGeometry args={[3, 1.5, 0.2]} />
-    <T.MeshBasicMaterial color="#4488ff" />
-  </T.Mesh>
-  <T.PointLight position={[0, 0, 1]} intensity={1} color="#4488ff" distance={10} />
-</T.Group>
-
-<!-- 紫のネオン看板 -->
-<T.Group position={[-13, 6, 20]}>
-  <T.Mesh>
-    <T.BoxGeometry args={[2, 3, 0.2]} />
-    <T.MeshBasicMaterial color="#aa44ff" />
-  </T.Mesh>
-  <T.PointLight position={[0, 0, 1]} intensity={1} color="#aa44ff" distance={10} />
-</T.Group>
+<T.Mesh position={[14, 10, 5]}>
+  <T.BoxGeometry args={[2.5, 1, 0.1]} />
+  <T.MeshBasicMaterial color="#4488ff" />
+</T.Mesh>
 
 <!-- 自動販売機 -->
-<T.Group position={[9, 1, -5]}>
-  <T.Mesh castShadow>
-    <T.BoxGeometry args={[1.2, 2, 0.8]} />
-    <T.MeshStandardMaterial color="#2244aa" />
-  </T.Mesh>
-  <T.Mesh position={[0, 0, 0.41]}>
-    <T.PlaneGeometry args={[1, 1.5]} />
-    <T.MeshBasicMaterial color="#88ccff" transparent opacity={0.5} />
-  </T.Mesh>
-  <T.PointLight position={[0, 0, 1]} intensity={0.3} color="#88ccff" distance={5} />
-</T.Group>
+<T.Mesh position={[8, 1, -5]}>
+  <T.BoxGeometry args={[1, 2, 0.6]} />
+  <T.MeshLambertMaterial color="#2244aa" />
+</T.Mesh>
 
-<!-- コンビニ風の店 -->
-<T.Group position={[-10, 0, 15]}>
-  <T.Mesh position.y={2} castShadow>
-    <T.BoxGeometry args={[8, 4, 6]} />
-    <T.MeshStandardMaterial color="#1a1a2e" />
-  </T.Mesh>
-  <!-- 店の入り口（光） -->
-  <T.Mesh position={[0, 1.5, 3.1]}>
-    <T.PlaneGeometry args={[3, 2.5]} />
-    <T.MeshBasicMaterial color="#ffffff" transparent opacity={0.3} />
-  </T.Mesh>
-  <T.PointLight position={[0, 2, 4]} intensity={1} color="#ffffff" distance={8} />
-</T.Group>
+<!-- 霧（軽め） -->
+<T.Fog color="#050510" near={30} far={100} attach="fog" />
 
-<!-- 空気感の霧 -->
-<T.Fog color="#0a0a1a" near={20} far={80} attach="fog" />
+<!-- ライティング（最小限） -->
+<T.AmbientLight intensity={0.4} color="#6688aa" />
+<T.DirectionalLight position={[10, 30, 10]} intensity={0.5} color="#8899bb" />
 
-<!-- 環境光 -->
-<T.AmbientLight intensity={0.15} color="#4466aa" />
+<!-- 妖気の光（1つだけ） -->
+<T.PointLight position={[0, 3, 0]} intensity={0.8} color="#ff0040" distance={30} />
 
-<!-- メインの指向性ライト（月明かり） -->
-<T.DirectionalLight 
-  position={[20, 40, 20]} 
-  intensity={0.3}
-  color="#6688cc"
-  castShadow
-/>
+<!-- スカイボックス -->
+<T.Mesh>
+  <T.SphereGeometry args={[200, 16, 16]} />
+  <T.MeshBasicMaterial color="#030308" side={1} />
+</T.Mesh>
 
-<!-- 赤い不気味な光（妖怪の気配） -->
-<T.PointLight position={[0, 3, 0]} intensity={0.5} color="#ff0040" distance={20} />
+<!-- 月 -->
+<T.Mesh position={[50, 60, -100]}>
+  <T.SphereGeometry args={[8, 16, 16]} />
+  <T.MeshBasicMaterial color="#ffffee" />
+</T.Mesh>
