@@ -1,42 +1,102 @@
-# sv
+# THE YOKAI ⚔️👹
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+夜の東京を舞台にした3Dアクションゲーム。妖怪を倒して魂を集め、キャラクターを強化しよう！
 
-## Creating a project
+🎮 **プレイ:** https://the-yokai-production.up.railway.app
 
-If you're seeing this, you've probably already done this step. Congrats!
+## 概要
 
-```sh
-# create a new project
-npx sv create my-app
-```
+- **ジャンル:** 3Dアクション
+- **技術:** SvelteKit + Threlte (Three.js) + TypeScript
+- **デプロイ:** Railway
 
-To recreate this project with the same configuration:
+## 機能
 
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --install npm the-yokai
-```
+### ✅ 実装済み
+- 三人称視点カメラ（マウスで回転）
+- カメラ基準の移動（WASD）
+- 4キャラクター（刀・銃・術・格闘）
+- キャラ別スキルツリー
+- 敵（小鬼）との戦闘
+- 魂の収集システム
+- キャラ・スキルのアンロック
+- セーブ機能（localStorage）
+- 渋谷風ステージ
 
-## Developing
+### 🔜 未実装（予定）
+- 剣の攻撃モーション改善
+- スキルモーション
+- 敵の攻撃パターン
+- キャラクターデザイン（見た目の改善）
+- ボス敵
+- ステージ追加
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## 操作方法
 
-```sh
+| キー | 操作 |
+|------|------|
+| WASD | 移動（カメラ基準） |
+| マウス | カメラ回転（クリックでロック） |
+| スペース | 攻撃 |
+| 1-4 | キャラ切り替え |
+| K | スキルツリー |
+| C | キャラ選択 |
+
+## キャラクター
+
+| キャラ | 名前 | 武器 | 特徴 |
+|--------|------|------|------|
+| 🗡️ | 零 | 刀 | バランス型（初期キャラ） |
+| 🔫 | 凛 | 銃 | 遠距離攻撃（50魂で解放） |
+| ✨ | 紫 | 術 | 魔法攻撃（100魂で解放） |
+| 👊 | 剛 | 拳 | 高速近接（75魂で解放） |
+
+## 開発
+
+```bash
+# 依存関係インストール
+npm install
+
+# 開発サーバー
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
+# ビルド
 npm run build
+
+# デプロイ
+railway up --service the-yokai
 ```
 
-You can preview the production build with `npm run preview`.
+## ファイル構成
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```
+src/
+├── lib/
+│   ├── components/
+│   │   ├── Game.svelte          # ゲームコンテナ
+│   │   ├── Scene.svelte         # 3Dシーン
+│   │   ├── ThirdPersonCamera.svelte  # カメラ
+│   │   ├── Stage.svelte         # ステージ
+│   │   ├── Player.svelte        # プレイヤー
+│   │   ├── Enemy.svelte         # 敵
+│   │   └── GameUI.svelte        # UI
+│   └── game/
+│       ├── gameState.ts         # ゲーム状態管理
+│       └── skillTrees.ts        # スキルツリー定義
+└── routes/
+    └── +page.svelte             # メインページ
+```
+
+## 開発履歴
+
+- 2025-02-01: 初期開発開始
+  - プロジェクト作成、Threlte導入
+  - 4キャラクター実装
+  - スキルツリー実装
+  - 三人称視点カメラ
+  - 渋谷風ステージ
+  - カメラ基準の移動
+
+---
+
+Made with 🌸 by カイリ & ララ
