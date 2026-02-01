@@ -41,11 +41,8 @@
     if (hp <= 0) {
       hp = 0;
       // 敵を倒した処理（後で実装）
-      gameState.update(s => ({
-        ...s,
-        souls: s.souls + 10,
-        enemiesDefeated: s.enemiesDefeated + 1,
-      }));
+      gameState.addSouls(10);
+      gameState.defeatEnemy();
     }
   }
 
