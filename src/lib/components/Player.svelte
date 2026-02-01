@@ -30,11 +30,6 @@
     const key = e.key.toLowerCase();
     keys[key] = true;
     
-    // 攻撃
-    if (e.key === ' ' && !isAttacking) {
-      attack();
-    }
-    
     // スキル発動
     if (key === 'q') useSkill('Q');
     if (key === 'e') useSkill('E');
@@ -53,6 +48,13 @@
 
   function handleKeyUp(e: KeyboardEvent) {
     keys[e.key.toLowerCase()] = false;
+  }
+
+  function handleMouseDown(e: MouseEvent) {
+    // 左クリックで攻撃
+    if (e.button === 0 && !isAttacking && document.pointerLockElement) {
+      attack();
+    }
   }
 
   function attack() {
@@ -94,11 +96,13 @@
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousedown', handleMouseDown);
   });
 
   onDestroy(() => {
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('keyup', handleKeyUp);
+    window.removeEventListener('mousedown', handleMouseDown);
   });
 
   useTask((delta) => {

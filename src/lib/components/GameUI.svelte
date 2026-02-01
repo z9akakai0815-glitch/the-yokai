@@ -142,7 +142,7 @@
   <!-- 操作説明（左下） -->
   <div class="controls-hint">
     <div class="hint-row"><span class="key">WASD</span><span class="action">移動</span></div>
-    <div class="hint-row"><span class="key">SPACE</span><span class="action">攻撃</span></div>
+    <div class="hint-row"><span class="key">左クリック</span><span class="action">攻撃</span></div>
     <div class="hint-row"><span class="key">Q/E/R</span><span class="action">スキル</span></div>
   </div>
 
