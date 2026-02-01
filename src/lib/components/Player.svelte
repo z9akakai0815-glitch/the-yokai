@@ -76,25 +76,32 @@
     const charType = $gameState.currentCharacter;
     const speed = BASE_SPEED * characterParams[charType].speed;
     
-    // 移動
-    let moveX = 0;
-    let moveZ = 0;
+    // 移動入力
+    let inputX = 0;
+    let inputZ = 0;
 
-    if (keys['w'] || keys['arrowup']) moveZ -= 1;
-    if (keys['s'] || keys['arrowdown']) moveZ += 1;
-    if (keys['a'] || keys['arrowleft']) moveX -= 1;
-    if (keys['d'] || keys['arrowright']) moveX += 1;
+    if (keys['w'] || keys['arrowup']) inputZ -= 1;
+    if (keys['s'] || keys['arrowdown']) inputZ += 1;
+    if (keys['a'] || keys['arrowleft']) inputX -= 1;
+    if (keys['d'] || keys['arrowright']) inputX += 1;
 
-    // 移動ベクトルを正規化
-    if (moveX !== 0 || moveZ !== 0) {
-      const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
-      moveX /= length;
-      moveZ /= length;
-      rotation = Math.atan2(moveX, moveZ);
+    // 移動ベクトルを正規化して適用
+    if (inputX !== 0 || inputZ !== 0) {
+      const length = Math.sqrt(inputX * inputX + inputZ * inputZ);
+      inputX /= length;
+      inputZ /= length;
+      
+      // 移動方向に向きを変える
+      rotation = Math.atan2(inputX, inputZ);
+      
+      // 位置を更新
+      position.x += inputX * speed;
+      position.z += inputZ * speed;
+      
+      // 道路の範囲内に制限
+      position.x = Math.max(-9, Math.min(9, position.x));
+      position.z = Math.max(-40, Math.min(40, position.z));
     }
-
-    position.x += moveX * speed;
-    position.z += moveZ * speed;
 
     // 攻撃アニメーション
     if (isAttacking) {
