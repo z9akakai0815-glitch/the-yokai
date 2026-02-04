@@ -163,47 +163,230 @@
   $: weaponRotation = isAttacking ? Math.sin(attackAnimation * Math.PI) * 1.5 : 0;
   $: charType = $gameState.currentCharacter;
   $: charColor = $gameState.characters[charType].color;
+  
+  // 歩きアニメーション
+  let walkCycle = 0;
+  $: isMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'] || 
+                keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];
+  
+  // 待機アニメーション
+  let idleBreath = 0;
+  
+  useTask((delta) => {
+    if (isMoving) {
+      walkCycle += delta * 10;
+    } else {
+      walkCycle *= 0.9; // 徐々に止まる
+    }
+    idleBreath += delta * 2;
+  });
+  
+  $: breathOffset = Math.sin(idleBreath) * 0.02;
+  $: leftArmSwing = Math.sin(walkCycle) * 0.5;
+  $: rightArmSwing = Math.sin(walkCycle + Math.PI) * 0.5;
+  $: leftLegSwing = Math.sin(walkCycle + Math.PI) * 0.4;
+  $: rightLegSwing = Math.sin(walkCycle) * 0.4;
 </script>
 
 <T.Group position.x={position.x} position.y={position.y} position.z={position.z} rotation.y={rotation}>
-  <!-- 体 -->
-  <T.Mesh position.y={1} castShadow>
-    <T.CapsuleGeometry args={[0.3, 1, 8, 16]} />
-    <T.MeshLambertMaterial color="#2a2a4a" />
-  </T.Mesh>
-
-  <!-- 頭 -->
-  <T.Mesh position.y={2} castShadow>
-    <T.SphereGeometry args={[0.35, 12, 12]} />
-    <T.MeshLambertMaterial color="#ffdbac" />
-  </T.Mesh>
-
-  <!-- 髪 -->
-  <T.Mesh position={[0, 2.2, -0.1]} castShadow>
-    <T.SphereGeometry args={[0.38, 12, 12]} />
-    <T.MeshLambertMaterial color={charColor} />
-  </T.Mesh>
-
-  <!-- 武器 -->
+  
+  <!-- ========== 刀使い・零 ========== -->
   {#if charType === 'sword'}
-    <T.Group position={[0.5, 1.2, 0]} rotation.x={weaponRotation}>
-      <T.Mesh position.y={-0.2}>
-        <T.CylinderGeometry args={[0.04, 0.04, 0.3, 8]} />
-        <T.MeshLambertMaterial color="#4a3728" />
+    <!-- 体（現代アレンジ着物） -->
+    <T.Group position.y={breathOffset}>
+      <!-- 胴体（着物） -->
+      <T.Mesh position.y={1.1}>
+        <T.BoxGeometry args={[0.55, 0.9, 0.35]} />
+        <T.MeshLambertMaterial color="#1a1a2e" />
       </T.Mesh>
-      <T.Mesh position.y={0.4}>
-        <T.BoxGeometry args={[0.02, 0.8, 0.08]} />
-        <T.MeshLambertMaterial color="#c0c0c0" />
+      
+      <!-- 着物の襟（V字） -->
+      <T.Mesh position={[0.12, 1.4, 0.18]} rotation.z={-0.3}>
+        <T.BoxGeometry args={[0.15, 0.3, 0.05]} />
+        <T.MeshLambertMaterial color="#2a3a5a" />
       </T.Mesh>
-      {#if isAttacking}
-        <T.Mesh position.y={0.4}>
-          <T.BoxGeometry args={[0.1, 1, 0.3]} />
-          <T.MeshBasicMaterial color="#4488ff" transparent opacity={0.5} />
+      <T.Mesh position={[-0.12, 1.4, 0.18]} rotation.z={0.3}>
+        <T.BoxGeometry args={[0.15, 0.3, 0.05]} />
+        <T.MeshLambertMaterial color="#2a3a5a" />
+      </T.Mesh>
+      
+      <!-- 帯 -->
+      <T.Mesh position.y={0.85}>
+        <T.BoxGeometry args={[0.58, 0.15, 0.38]} />
+        <T.MeshLambertMaterial color="#4488ff" />
+      </T.Mesh>
+      
+      <!-- 袴（下半身） -->
+      <T.Mesh position.y={0.45}>
+        <T.BoxGeometry args={[0.5, 0.5, 0.35]} />
+        <T.MeshLambertMaterial color="#0a0a1a" />
+      </T.Mesh>
+      
+      <!-- 左脚 -->
+      <T.Group position={[-0.12, 0.3, 0]} rotation.x={leftLegSwing}>
+        <T.Mesh position.y={-0.2}>
+          <T.CylinderGeometry args={[0.08, 0.07, 0.5, 8]} />
+          <T.MeshLambertMaterial color="#0a0a1a" />
         </T.Mesh>
-      {/if}
+        <!-- 足 -->
+        <T.Mesh position={[0, -0.45, 0.05]}>
+          <T.BoxGeometry args={[0.1, 0.08, 0.18]} />
+          <T.MeshLambertMaterial color="#222" />
+        </T.Mesh>
+      </T.Group>
+      
+      <!-- 右脚 -->
+      <T.Group position={[0.12, 0.3, 0]} rotation.x={rightLegSwing}>
+        <T.Mesh position.y={-0.2}>
+          <T.CylinderGeometry args={[0.08, 0.07, 0.5, 8]} />
+          <T.MeshLambertMaterial color="#0a0a1a" />
+        </T.Mesh>
+        <!-- 足 -->
+        <T.Mesh position={[0, -0.45, 0.05]}>
+          <T.BoxGeometry args={[0.1, 0.08, 0.18]} />
+          <T.MeshLambertMaterial color="#222" />
+        </T.Mesh>
+      </T.Group>
+      
+      <!-- 左腕（着物袖） -->
+      <T.Group position={[-0.35, 1.15, 0]} rotation.x={leftArmSwing}>
+        <T.Mesh position.y={-0.15}>
+          <T.BoxGeometry args={[0.18, 0.4, 0.2]} />
+          <T.MeshLambertMaterial color="#1a1a2e" />
+        </T.Mesh>
+        <!-- 手 -->
+        <T.Mesh position.y={-0.4}>
+          <T.SphereGeometry args={[0.08, 8, 8]} />
+          <T.MeshLambertMaterial color="#ffdbac" />
+        </T.Mesh>
+      </T.Group>
+      
+      <!-- 右腕（刀を持つ） -->
+      <T.Group position={[0.35, 1.15, 0]} rotation.x={isAttacking ? -weaponRotation : rightArmSwing}>
+        <T.Mesh position.y={-0.15}>
+          <T.BoxGeometry args={[0.18, 0.4, 0.2]} />
+          <T.MeshLambertMaterial color="#1a1a2e" />
+        </T.Mesh>
+        <!-- 手 -->
+        <T.Mesh position.y={-0.4}>
+          <T.SphereGeometry args={[0.08, 8, 8]} />
+          <T.MeshLambertMaterial color="#ffdbac" />
+        </T.Mesh>
+        
+        <!-- 刀 -->
+        <T.Group position={[0.05, -0.35, 0.15]} rotation.x={isAttacking ? weaponRotation * 1.5 : 0.3}>
+          <!-- 柄 -->
+          <T.Mesh position.y={-0.15}>
+            <T.CylinderGeometry args={[0.03, 0.03, 0.25, 8]} />
+            <T.MeshLambertMaterial color="#2a1a0a" />
+          </T.Mesh>
+          <!-- 鍔 -->
+          <T.Mesh position.y={0}>
+            <T.CylinderGeometry args={[0.06, 0.06, 0.02, 8]} />
+            <T.MeshLambertMaterial color="#888" />
+          </T.Mesh>
+          <!-- 刀身 -->
+          <T.Mesh position.y={0.45}>
+            <T.BoxGeometry args={[0.02, 0.8, 0.06]} />
+            <T.MeshLambertMaterial color="#e0e8f0" />
+          </T.Mesh>
+          <!-- 刃の光沢 -->
+          <T.Mesh position={[0.015, 0.45, 0]}>
+            <T.BoxGeometry args={[0.005, 0.78, 0.05]} />
+            <T.MeshBasicMaterial color="#ffffff" transparent opacity={0.5} />
+          </T.Mesh>
+          {#if isAttacking}
+            <!-- 斬撃エフェクト -->
+            <T.Mesh position.y={0.45}>
+              <T.BoxGeometry args={[0.15, 1, 0.4]} />
+              <T.MeshBasicMaterial color="#4488ff" transparent opacity={0.4} />
+            </T.Mesh>
+          {/if}
+        </T.Group>
+      </T.Group>
+      
+      <!-- 首 -->
+      <T.Mesh position.y={1.55}>
+        <T.CylinderGeometry args={[0.08, 0.1, 0.1, 8]} />
+        <T.MeshLambertMaterial color="#ffdbac" />
+      </T.Mesh>
+      
+      <!-- 頭 -->
+      <T.Mesh position.y={1.85}>
+        <T.SphereGeometry args={[0.25, 12, 12]} />
+        <T.MeshLambertMaterial color="#ffdbac" />
+      </T.Mesh>
+      
+      <!-- 五条悟風の髪（サラサラ前髪） -->
+      <!-- 後ろ髪 -->
+      <T.Mesh position={[0, 1.95, -0.1]}>
+        <T.SphereGeometry args={[0.27, 12, 12]} />
+        <T.MeshLambertMaterial color="#4488ff" />
+      </T.Mesh>
+      <!-- 前髪（サラサラ、目にかかる） -->
+      <T.Mesh position={[0, 2, 0.15]} rotation.x={0.3}>
+        <T.BoxGeometry args={[0.4, 0.15, 0.1]} />
+        <T.MeshLambertMaterial color="#4488ff" />
+      </T.Mesh>
+      <!-- 前髪の束（左） -->
+      <T.Mesh position={[-0.12, 1.9, 0.2]} rotation.z={0.15}>
+        <T.BoxGeometry args={[0.1, 0.2, 0.05]} />
+        <T.MeshLambertMaterial color="#3377ee" />
+      </T.Mesh>
+      <!-- 前髪の束（右） -->
+      <T.Mesh position={[0.12, 1.9, 0.2]} rotation.z={-0.15}>
+        <T.BoxGeometry args={[0.1, 0.2, 0.05]} />
+        <T.MeshLambertMaterial color="#3377ee" />
+      </T.Mesh>
+      <!-- サイドの髪 -->
+      <T.Mesh position={[-0.22, 1.85, 0.05]}>
+        <T.BoxGeometry args={[0.08, 0.25, 0.1]} />
+        <T.MeshLambertMaterial color="#4488ff" />
+      </T.Mesh>
+      <T.Mesh position={[0.22, 1.85, 0.05]}>
+        <T.BoxGeometry args={[0.08, 0.25, 0.1]} />
+        <T.MeshLambertMaterial color="#4488ff" />
+      </T.Mesh>
+      
+      <!-- 目（鋭い目、髪の隙間から見える） -->
+      <T.Mesh position={[-0.08, 1.87, 0.23]}>
+        <T.SphereGeometry args={[0.03, 6, 6]} />
+        <T.MeshBasicMaterial color="#88ccff" />
+      </T.Mesh>
+      <T.Mesh position={[0.08, 1.87, 0.23]}>
+        <T.SphereGeometry args={[0.03, 6, 6]} />
+        <T.MeshBasicMaterial color="#88ccff" />
+      </T.Mesh>
     </T.Group>
+    
+    <!-- オーラ -->
+    <T.Mesh position.y={0.02} rotation.x={-Math.PI / 2}>
+      <T.CircleGeometry args={[0.6, 16]} />
+      <T.MeshBasicMaterial color="#4488ff" transparent opacity={0.2} />
+    </T.Mesh>
 
-  {:else if charType === 'gun'}
+  <!-- ========== 他のキャラ（後で実装） ========== -->
+  {:else}
+    <!-- 体 -->
+    <T.Mesh position.y={1} castShadow>
+      <T.CapsuleGeometry args={[0.3, 1, 8, 16]} />
+      <T.MeshLambertMaterial color="#2a2a4a" />
+    </T.Mesh>
+
+    <!-- 頭 -->
+    <T.Mesh position.y={2} castShadow>
+      <T.SphereGeometry args={[0.35, 12, 12]} />
+      <T.MeshLambertMaterial color="#ffdbac" />
+    </T.Mesh>
+
+    <!-- 髪 -->
+    <T.Mesh position={[0, 2.2, -0.1]} castShadow>
+      <T.SphereGeometry args={[0.38, 12, 12]} />
+      <T.MeshLambertMaterial color={charColor} />
+    </T.Mesh>
+
+    <!-- 武器 -->
+    {#if charType === 'gun'}
     <T.Group position={[0.5, 1, 0.3]} rotation.y={weaponRotation * 0.3}>
       <T.Mesh>
         <T.BoxGeometry args={[0.08, 0.15, 0.4]} />
@@ -254,11 +437,12 @@
     </T.Group>
   {/if}
 
-  <!-- オーラ -->
-  <T.Mesh position.y={0.05} rotation.x={-Math.PI / 2}>
-    <T.CircleGeometry args={[0.5, 16]} />
-    <T.MeshBasicMaterial color={charColor} transparent opacity={0.3} />
-  </T.Mesh>
+    <!-- オーラ -->
+    <T.Mesh position.y={0.05} rotation.x={-Math.PI / 2}>
+      <T.CircleGeometry args={[0.5, 16]} />
+      <T.MeshBasicMaterial color={charColor} transparent opacity={0.3} />
+    </T.Mesh>
+  {/if}
 
   <!-- スキルエフェクト -->
   {#if activeSkillEffect}
